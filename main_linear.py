@@ -12,14 +12,12 @@ from utils import *
 
 print = logging.info
 
-
 class RMSELoss(torch.nn.Module):
     def forward(self, prediction, target):
         return torch.linalg.vector_norm(prediction - target) / math.sqrt(target.shape[0])
 
-
 def load_checkpoint(path, map_location='cpu'):
-    """Load this project's trusted checkpoints across PyTorch versions."""
+
     try:
         return torch.load(
             path,
@@ -27,9 +25,8 @@ def load_checkpoint(path, map_location='cpu'):
             weights_only=False,
         )
     except TypeError:
-        # Older PyTorch releases do not support the weights_only argument.
-        return torch.load(path, map_location=map_location)
 
+        return torch.load(path, map_location=map_location)
 
 def parse_option():
     parser = argparse.ArgumentParser('argument for training')
@@ -152,7 +149,6 @@ def parse_option():
 
     return opt
 
-
 def set_loader(opt):
     train_transform = IdentityTransform() if is_sdf_dataset(opt.dataset) else get_transforms(split='train', aug=opt.aug)
     eval_transform = IdentityTransform() if is_sdf_dataset(opt.dataset) else get_transforms(split='val', aug=opt.aug)
@@ -211,7 +207,6 @@ def set_loader(opt):
 
     return train_loader, val_loader, test_loader
 
-
 def set_model(opt):
     device = get_device()
     input_dim = get_input_dim(opt.dataset) if is_sdf_dataset(opt.dataset) else None
@@ -248,7 +243,6 @@ def set_model(opt):
     criterion = criterion.to(device)
 
     return model, regressor, criterion
-
 
 def train(train_loader, model, regressor, criterion, optimizer, epoch, opt):
     model.eval()
@@ -290,7 +284,6 @@ def train(train_loader, model, regressor, criterion, optimizer, epoch, opt):
                 data_time=data_time, loss=losses,
                 loss_name=opt.predictor_loss))
 
-
 def evaluate_rmse(test_loader, model, regressor):
     model.eval()
     regressor.eval()
@@ -314,7 +307,6 @@ def evaluate_rmse(test_loader, model, regressor):
 
     residual = prediction.astype(np.float64) - target.astype(np.float64)
     return float(np.linalg.norm(residual, ord='fro') / math.sqrt(len(target)))
-
 
 def main():
     opt = parse_option()
@@ -350,12 +342,10 @@ def main():
         best_error = ckpt_state.get('best_error', best_error)
         print(f"<=== Epoch [{ckpt_state['epoch']}] Resumed from {opt.resume}!")
 
-
-    # training routine
     for epoch in range(start_epoch, opt.epochs + 1):
         if scheduler is None:
             adjust_learning_rate(opt, optimizer, epoch)
-        # train for one epoch
+
         train(train_loader, model, regressor, criterion, optimizer, epoch, opt)
         if scheduler is not None:
             scheduler.step()
@@ -411,8 +401,7 @@ def main():
             opt.huber_delta if opt.predictor_loss == 'huber' else None
         ),
     }
-    # Keep the default basename short: experiment folders already encode the
-    # full configuration and can approach Windows' traditional MAX_PATH limit.
+
     result_file = opt.result_file or os.path.join(
         opt.save_folder, f'test_seed{opt.seed}_{opt.trial}.json'
     )
@@ -421,7 +410,6 @@ def main():
         json.dump(result, handle, indent=2)
     print(f'Test metrics saved to {os.path.abspath(result_file)}')
     return result
-
 
 if __name__ == '__main__':
     main()

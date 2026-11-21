@@ -1,8 +1,5 @@
-"""Rank-N-Contrast losses for scalar and multi-output regression."""
-
 import torch
 import torch.nn as nn
-
 
 class LabelDifference(nn.Module):
     def __init__(self, distance_type='l1', lmmo_M=None, lmmo_V=None):
@@ -37,7 +34,6 @@ class LabelDifference(nn.Module):
             encoded = labels.to(self.lmmo_V.dtype) @ self.lmmo_V
             return torch.cdist(encoded, encoded, p=2).square()
         raise ValueError(f'Unknown label distance: {self.distance_type}.')
-
 
 class RnCLoss(nn.Module):
     def __init__(
@@ -77,7 +73,7 @@ class RnCLoss(nn.Module):
         return mask.to(device)
 
     def forward(self, features, labels, inputs=None):
-        if features.dim() == 3:   #[batch_size, 2, feature_dim]
+        if features.dim() == 3:
             batch_size = features.shape[0]
             features = torch.cat([features[:, 0], features[:, 1]], dim=0)
             labels = (
@@ -115,15 +111,11 @@ class RnCLoss(nn.Module):
         sorted_exp_logits = exp_logits.gather(1, order)
         sorted_neighbors = neighborhood_mask.gather(1, order)
 
-        # A suffix contains exactly the candidates whose relation distance is
-        # greater than or equal to the distance at its first position.
         suffix_sums = (
             sorted_exp_logits.masked_fill(~sorted_neighbors, 0)
             .flip(1).cumsum(1).flip(1)
         )
 
-        # Equal distances must share one denominator.  This is essential for
-        # the duplicated labels introduced by two-view augmentation.
         group_starts = torch.cat([
             torch.ones((n, 1), dtype=torch.bool, device=features.device),
             sorted_diffs[:, 1:] != sorted_diffs[:, :-1],
@@ -143,15 +135,7 @@ class RnCLoss(nn.Module):
 
         return loss / neighborhood_mask.sum()
 
-
 class MoRnCLoss(nn.Module):
-    """Global-local RnC with Mahalanobis or L2 global label relations.
-
-    ``global_distance='mahalanobis'`` implements Mo-RNC.  With
-    ``global_distance='l2'``, the global branch uses ordinary multi-output
-    Euclidean label distance, while the local branch is unchanged.  The
-    latter is the L2-Mixed baseline.
-    """
 
     def __init__(
         self,
@@ -172,9 +156,7 @@ class MoRnCLoss(nn.Module):
             matrix = torch.as_tensor(mahalanobis_matrix, dtype=torch.float32)
             if matrix.dim() != 2 or matrix.shape[0] != matrix.shape[1]:
                 raise ValueError('mahalanobis_matrix must be a square matrix.')
-            # main_rnc.py 已根据 mahalanobis_mode 决定传入完整矩阵还是
-            # 对角矩阵。这里只消除浮点误差造成的轻微非对称，不能再次
-            # 删除非对角元素，否则 full 模式会悄悄退化为 diagonal。
+
             matrix = 0.5 * (matrix + matrix.T)
             if torch.linalg.eigvalsh(matrix).min() < -1e-5:
                 raise ValueError(
@@ -198,7 +180,6 @@ class MoRnCLoss(nn.Module):
         self.temperature_beta = float(temperature_beta)
         self.input_knn_k = input_knn_k
 
-        # Detached values for training diagnostics.
         self.last_global_loss = None
         self.last_local_loss = None
         self.last_temperature = None
@@ -234,14 +215,14 @@ class MoRnCLoss(nn.Module):
         return mask.to(device)
 
     def _mahalanobis_distances(self, labels):
-        labels = labels.to(self.mahalanobis_matrix.dtype)  # Ỹ：标准化标签。
-        differences = labels[:, None, :] - labels[None, :, :]  # Δᵢⱼ = ỹᵢ − ỹⱼ。
+        labels = labels.to(self.mahalanobis_matrix.dtype)
+        differences = labels[:, None, :] - labels[None, :, :]
         return torch.einsum(
             'ijd,df,ijf->ij',
             differences,
             self.mahalanobis_matrix,
             differences,
-        )  # d(ỹᵢ, ỹⱼ) = ΔᵢⱼᵀMΔᵢⱼ。
+        )
 
     def _global_distances(self, labels):
         if self.global_distance == 'l2':

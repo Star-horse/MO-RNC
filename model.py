@@ -2,10 +2,8 @@ import torch
 import torch.nn as nn
 import math
 
-
 def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
-
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -34,7 +32,6 @@ class BasicBlock(nn.Module):
         out += residual
         out = self.relu(out)
         return out
-
 
 class Bottleneck(nn.Module):
     expansion = 4
@@ -67,7 +64,6 @@ class Bottleneck(nn.Module):
         out += residual
         out = self.relu(out)
         return out
-
 
 class ResNet(nn.Module):
 
@@ -128,13 +124,11 @@ class ResNet(nn.Module):
 
         return x
 
-
 def resnet18(**kwargs):
     return ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
 
 def resnet50(**kwargs):
     return ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
-
 
 model_dict = {
     'resnet18': [resnet18, 512],
@@ -144,7 +138,7 @@ model_dict = {
 class MLPEncoder(nn.Module):
     def __init__(self, input_dim, hidden_dims=None, feat_dim=None):
         super(MLPEncoder, self).__init__()
-        # Keep the historical encoder when no architecture is specified.
+
         hidden_dims = [input_dim, input_dim] if hidden_dims is None else list(hidden_dims)
         feat_dim = input_dim if feat_dim is None else feat_dim
         if not hidden_dims or any(width < 1 for width in hidden_dims):
@@ -170,7 +164,6 @@ class MLPEncoder(nn.Module):
     def forward(self, x):
         return self.net(x.float())
 
-
 class Encoder(nn.Module):
     def __init__(self, name='mlp', input_dim=None, hidden_dims=None, feat_dim=None):
         super(Encoder, self).__init__()
@@ -187,7 +180,6 @@ class Encoder(nn.Module):
     def forward(self, x):
         feat = self.encoder(x)
         return feat
-
 
 class SupResNet(nn.Module):
     def __init__(self, name='resnet18', num_classes=10, input_dim=None,

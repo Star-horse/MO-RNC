@@ -8,7 +8,6 @@ import joblib
 from sklearn.preprocessing import StandardScaler
 from torch.utils import data
 
-
 SDF_DATASETS = {
     'Atp1d': {'file': 'atp1d.arff', 'label_dim': 6, 'attr_dim': 417},
     'Atp7d': {'file': 'atp7d.arff', 'label_dim': 6, 'attr_dim': 417},
@@ -28,11 +27,10 @@ SDF_DATASETS = {
     'sf2': {'file': 'sf2.arff', 'label_dim': 3, 'attr_dim': 13},
 }
 
-
 def fixed_train_val_test_split(
     n, seed=0, train_ratio=0.8, val_ratio=0.0
 ):
-    """Split once, then reserve ``val_ratio`` of the training partition."""
+
     rng = np.random.RandomState(seed)
     indices = rng.permutation(n)
     n_train_val = int(train_ratio * n)
@@ -43,7 +41,6 @@ def fixed_train_val_test_split(
         indices[n_train:n_train_val],
         indices[n_train_val:],
     )
-
 
 def replace_nonfinite_with_train_median(x_train, *other_arrays):
     x_train = x_train.astype(np.float32, copy=True)
@@ -66,7 +63,6 @@ def replace_nonfinite_with_train_median(x_train, *other_arrays):
         cleaned.append(arr)
     return tuple(cleaned)
 
-
 class AgeDB(data.Dataset):
     def __init__(self, data_folder, transform=None, split='train'):
         df = pd.read_csv(f'./data/agedb.csv')
@@ -86,7 +82,6 @@ class AgeDB(data.Dataset):
             img = self.transform(img)
 
         return img, label
-
 
 class SDFTabular(data.Dataset):
     def __init__(
@@ -111,7 +106,6 @@ class SDFTabular(data.Dataset):
             os.path.dirname(os.path.abspath(data_folder)), 'sdf_model', name
         )
 
-        # ARFF lives under SDF/Data by default, but data_folder can override it.
         arff_path = os.path.join(data_folder, SDF_DATASETS[name]['file'])
         if not os.path.exists(arff_path):
             arff_path = os.path.join('SDF', 'Data', SDF_DATASETS[name]['file'])
@@ -132,8 +126,7 @@ class SDFTabular(data.Dataset):
                 split_file, len(labels)
             )
         else:
-            # First reserve the test set, then take validation data only from
-            # the outer training partition.
+
             train_idx, val_idx, test_idx = fixed_train_val_test_split(
                 len(labels), seed=seed, train_ratio=train_ratio,
                 val_ratio=val_ratio,
@@ -201,7 +194,7 @@ class SDFTabular(data.Dataset):
         raw, _ = arff.loadarff(arff_path)
         df = pd.DataFrame(raw)
         for col in df.columns:
-            # scipy may decode nominal numeric values as bytes; convert all columns to float.
+
             if df[col].dtype == object:
                 df[col] = df[col].apply(lambda v: v.decode('utf-8') if isinstance(v, bytes) else v)
             df[col] = pd.to_numeric(df[col], errors='raise')
@@ -213,7 +206,6 @@ class SDFTabular(data.Dataset):
             lower_to_col = {col.lower(): col for col in df.columns}
             return [lower_to_col[col.lower()] for col in cfg['labels']]
 
-        # Datasets without named labels use the conventional last label_dim columns.
         return list(df.columns[-cfg['label_dim']:])
 
     @staticmethod
@@ -231,7 +223,7 @@ class SDFTabular(data.Dataset):
 
     @staticmethod
     def _load_split_file(split_file, sample_count):
-        """读取相对于过滤后数据集的固定 train/val/test 样本下标。"""
+
         with open(split_file, 'r', encoding='utf-8') as handle:
             split_data = json.load(handle)
 
@@ -261,81 +253,65 @@ class SDFTabular(data.Dataset):
                     raise ValueError(f'Splits {left} and {right} overlap.')
         return parts['train'], parts['val'], parts['test']
 
-
 class Enb(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'Enb', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
-
 
 class Atp1d(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'Atp1d', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
 
-
 class Atp7d(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'Atp7d', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
-
 
 class Jura(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'Jura', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
 
-
 class Oes10(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'Oes10', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
-
 
 class Oes97(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'Oes97', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
 
-
 class Osales(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'Osales', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
-
 
 class Sarcos(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'Sarcos', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
 
-
 class Scpf(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'Scpf', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
-
 
 class slump(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'slump', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
 
-
 class rf1(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'rf1', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
-
 
 class rf2(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'rf2', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
 
-
 class scm1d(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'scm1d', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
-
 
 class scm20d(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'scm20d', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
 
-
 class sf1(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):
         super().__init__(data_folder, 'sf1', transform, split, seed, train_ratio, val_ratio, save_dir, split_file)
-
 
 class sf2(SDFTabular):
     def __init__(self, data_folder='./SDF/Data', transform=None, split='train', seed=0, train_ratio=0.8, val_ratio=0.0, save_dir=None, split_file=None):

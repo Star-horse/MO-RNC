@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-"""Run the fixed configurations in the manuscript's main RNC comparison."""
-
 import argparse
 import csv
 import json
@@ -10,9 +7,6 @@ import statistics
 import subprocess
 import sys
 
-
-# Hidden widths, representation dimension, output count, batch size,
-# Euclidean temperature, MO-RNC temperature, covariance shrinkage, local weight.
 CONFIGS = {
     'Atp1d': ([256, 256], 256, 6, 0, 1.0, 0.5, 0.5, 0.01511934),
     'Atp7d': ([256, 256, 128], 64, 6, 0, 0.5, 0.5, 0.7, 0.00063437),
@@ -30,9 +24,8 @@ FILES = {
 METHODS = ('rnc_l2', 'rnc_mahalanobis', 'mo_rnc')
 ROOT = Path(__file__).resolve().parent
 
-
 def parse_args():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description="Run the fixed configurations in the manuscript's main RNC comparison.")
     parser.add_argument('--datasets', nargs='+', choices=CONFIGS, default=list(CONFIGS))
     parser.add_argument('--methods', nargs='+', choices=METHODS, default=list(METHODS))
     parser.add_argument('--seeds', nargs='+', type=int, default=list(range(10)))
@@ -50,7 +43,6 @@ def parse_args():
     args.data_folder = args.data_folder.resolve()
     args.output_dir = args.output_dir.resolve()
     return args
-
 
 def build_plan(args):
     plan = []
@@ -88,7 +80,6 @@ def build_plan(args):
                                  output_dir=str(folder), encoder=encoder, linear=linear))
     return plan
 
-
 def summarize(records, output_dir):
     with (output_dir / 'runs.csv').open('w', newline='') as handle:
         writer = csv.DictWriter(handle, fieldnames=['dataset', 'method', 'seed', 'rmse'])
@@ -105,7 +96,6 @@ def summarize(records, output_dir):
                                          mean_rmse=statistics.mean(values),
                                          std_rmse=statistics.stdev(values) if len(values) > 1 else ''))
 
-
 def main():
     args = parse_args()
     plan = build_plan(args)
@@ -116,7 +106,7 @@ def main():
         path = args.data_folder / FILES[dataset]
         if not path.is_file():
             raise FileNotFoundError(f'Extract the dataset archive first: missing {path}')
-    # Refuse to overwrite previous experiments, including partially completed runs.
+
     if args.output_dir.exists() and any(args.output_dir.iterdir()):
         raise FileExistsError(f'Use a new empty --output-dir: {args.output_dir}')
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -140,7 +130,6 @@ def main():
         records.append(dict(dataset=run['dataset'], method=run['method'], seed=run['seed'], rmse=rmse))
         summarize(records, args.output_dir)
     print(f"Completed {len(records)} runs. Summary: {args.output_dir / 'summary.csv'}", flush=True)
-
 
 if __name__ == '__main__':
     main()

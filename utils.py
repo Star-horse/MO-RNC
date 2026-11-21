@@ -10,9 +10,8 @@ try:
 except ModuleNotFoundError:
     transforms = None
 
-
 def get_device():
-    """Select CUDA, Apple Metal (MPS), or CPU in that order."""
+
     if torch.cuda.is_available():
         return torch.device('cuda')
     mps = getattr(torch.backends, 'mps', None)
@@ -20,12 +19,10 @@ def get_device():
         return torch.device('mps')
     return torch.device('cpu')
 
-
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-
 
 class TwoCropTransform:
     def __init__(self, transform):
@@ -34,9 +31,7 @@ class TwoCropTransform:
     def __call__(self, x):
         return [self.transform(x), self.transform(x)]
 
-
 class FixedMixupTwoView:
-    """Mix each sample with one of its label-space L2 nearest neighbors."""
 
     requires_dataset_binding = True
     returns_labels = True
@@ -86,9 +81,7 @@ class FixedMixupTwoView:
         labels = np.stack([self.labels[index], self.mixed_labels[index]])
         return views, labels
 
-
 class FixedGaussianNoiseTwoView:
-    """Return one clean view and one reproducibly perturbed view."""
 
     requires_dataset_binding = True
 
@@ -109,19 +102,15 @@ class FixedGaussianNoiseTwoView:
             self.transform(self.noisy_features[index]),
         ]
 
-
 class IdentityTransform:
     def __call__(self, x):
         return x
 
-
 def is_sdf_dataset(dataset):
     return dataset in SDF_DATASETS
 
-
 def get_dataset_names():
     return ['AgeDB'] + list(SDF_DATASETS.keys())
-
 
 def get_transforms(split, aug):
     if transforms is None:
@@ -161,7 +150,6 @@ def get_transforms(split, aug):
 
     return transform
 
-
 def get_label_dim(dataset):
     if dataset in ['AgeDB']:
         label_dim = 1
@@ -172,12 +160,10 @@ def get_label_dim(dataset):
         raise ValueError(dataset)
     return label_dim
 
-
 def get_input_dim(dataset):
     if dataset not in SDF_DATASETS:
         raise ValueError(dataset)
     return SDF_DATASETS[dataset]['attr_dim'] - get_label_dim(dataset)
-
 
 class AverageMeter(object):
     def __init__(self):
@@ -195,14 +181,12 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-
 def adjust_learning_rate(args, optimizer, epoch):
     lr = args.learning_rate
     eta_min = lr * (args.lr_decay_rate ** 3)
     lr = eta_min + (lr - eta_min) * (1 + math.cos(math.pi * epoch / args.epochs)) / 2
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
-
 
 def save_model(model, optimizer, opt, epoch, save_file):
     state = {
@@ -213,7 +197,6 @@ def save_model(model, optimizer, opt, epoch, save_file):
     }
     torch.save(state, save_file)
     del state
-
 
 def set_optimizer(opt, model):
     optimizer = torch.optim.SGD(model.parameters(), lr=opt.learning_rate,

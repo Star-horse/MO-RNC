@@ -11,13 +11,10 @@ from utils import *
 
 print = logging.info
 
-
 class RMSELoss(torch.nn.Module):
-    """Per-sample multivariate RMSE, matching main_linear.py."""
 
     def forward(self, prediction, target):
         return torch.linalg.vector_norm(prediction - target) / math.sqrt(target.shape[0])
-
 
 def parse_option():
     parser = argparse.ArgumentParser('argument for training')
@@ -78,7 +75,6 @@ def parse_option():
 
     return opt
 
-
 def set_loader(opt):
     train_transform = IdentityTransform() if is_sdf_dataset(opt.dataset) else get_transforms(split='train', aug=opt.aug)
     eval_transform = IdentityTransform() if is_sdf_dataset(opt.dataset) else get_transforms(split='val', aug=opt.aug)
@@ -137,7 +133,6 @@ def set_loader(opt):
 
     return train_loader, val_loader, test_loader
 
-
 def set_model(opt):
     device = get_device()
     criterion = RMSELoss()
@@ -160,7 +155,6 @@ def set_model(opt):
     criterion = criterion.to(device)
 
     return model, regressor, criterion
-
 
 def train(train_loader, model, regressor, criterion, optimizer, epoch, opt):
     if model is not None:
@@ -203,7 +197,6 @@ def train(train_loader, model, regressor, criterion, optimizer, epoch, opt):
             )
             print(to_print)
 
-
 def evaluate_rmse(data_loader, model, regressor):
     if model is not None:
         model.eval()
@@ -231,7 +224,6 @@ def evaluate_rmse(data_loader, model, regressor):
     residual = prediction.astype(np.float64) - target.astype(np.float64)
     return float(np.linalg.norm(residual, ord='fro') / math.sqrt(len(target)))
 
-
 def save_rmse_model(model, regressor, optimizer, opt, epoch, save_file):
     state = {
         'opt': opt,
@@ -243,18 +235,14 @@ def save_rmse_model(model, regressor, optimizer, opt, epoch, save_file):
     torch.save(state, save_file)
     del state
 
-
 def main():
     opt = parse_option()
     set_seed(opt.seed)
 
-    # build data loader
     train_loader, val_loader, test_loader = set_loader(opt)
 
-    # build model and criterion
     model, regressor, criterion = set_model(opt)
 
-    # build optimizer
     predictor = regressor if model is None else torch.nn.ModuleList([model, regressor])
     optimizer = set_optimizer(opt, predictor)
 
@@ -271,11 +259,9 @@ def main():
     best_error = 1e5
     save_file_best = os.path.join(opt.save_folder, 'best.pth')
 
-    # training routine
     for epoch in range(start_epoch, opt.epochs + 1):
         adjust_learning_rate(opt, optimizer, epoch)
 
-        # train for one epoch
         train(train_loader, model, regressor, criterion, optimizer, epoch, opt)
 
         if val_loader is not None:
@@ -313,7 +299,6 @@ def main():
     regressor.load_state_dict(checkpoint['regressor'])
     test_loss = evaluate_rmse(test_loader, model, regressor)
     print('Test RMSE: {:.6g}'.format(test_loss))
-
 
 if __name__ == '__main__':
     main()

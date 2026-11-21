@@ -12,7 +12,6 @@ from loss import MoRnCLoss, RnCLoss
 
 print = logging.info
 
-
 def parse_option():
     parser = argparse.ArgumentParser('argument for training')
 
@@ -149,7 +148,7 @@ def parse_option():
         action='store_true',
         help='restrict RnC positives and denominator candidates to input-x kNN',
     )
-    # RnC extension using the LMMO objective (Liu et al., Eqs. (1) and (8)).
+
     parser.add_argument(
         '--knn_k',
         type=int,
@@ -271,7 +270,6 @@ def parse_option():
 
     return opt
 
-
 def set_loader(opt):
     train_transform = IdentityTransform() if is_sdf_dataset(opt.dataset) else get_transforms(split='train', aug=opt.aug)
     if opt.mixup:
@@ -317,7 +315,6 @@ def set_loader(opt):
 
     return train_loader
 
-
 def prepare_lmmo_metric(opt, train_loader):
     if opt.label_diff not in ('lmmo_knn', 'yqy'):
         return None
@@ -348,21 +345,18 @@ def prepare_lmmo_metric(opt, train_loader):
     )
     return metric
 
-
 def prepare_fixed_mahalanobis(opt, train_loader):
-    if opt.label_diff != 'mo_rnc':  # 仅为 Mo-RNC 构造马氏矩阵 M。
-        return None  # 其他标签距离不需要 M。
+    if opt.label_diff != 'mo_rnc':
+        return None
 
-    labels = np.asarray(train_loader.dataset.labels, dtype=np.float64)  # Ỹ_train：标准化训练标签。
+    labels = np.asarray(train_loader.dataset.labels, dtype=np.float64)
     if opt.mahalanobis_covariance == 'ledoit_wolf':
         estimator = LedoitWolf(assume_centered=False).fit(labels)
         covariance = np.atleast_2d(estimator.covariance_)
         effective_shrinkage = float(estimator.shrinkage_)
     else:
         covariance = np.atleast_2d(np.cov(labels, rowvar=False))
-        # Shrink the empirical covariance towards the spherical target mu*I.
-        # rho=0 keeps the full empirical covariance; rho=1 produces a scaled
-        # identity precision and therefore the same ranking as squared L2.
+
         mean_variance = float(np.trace(covariance) / covariance.shape[0])
         spherical_covariance = mean_variance * np.eye(covariance.shape[0])
         covariance = (
@@ -373,9 +367,9 @@ def prepare_fixed_mahalanobis(opt, train_loader):
     covariance += opt.mahalanobis_ridge * np.eye(covariance.shape[0])
     matrix = np.linalg.pinv(covariance, hermitian=True)
 
-    matrix = 0.5 * (matrix + matrix.T)  # M_full ← ½(M_full + M_fullᵀ)。
-    eigenvalues, eigenvectors = np.linalg.eigh(matrix)  # M_full = QΛQᵀ。
-    matrix = (eigenvectors * np.maximum(eigenvalues, 0.0)) @ eigenvectors.T  # M_full ← Q max(Λ, 0)Qᵀ。
+    matrix = 0.5 * (matrix + matrix.T)
+    eigenvalues, eigenvectors = np.linalg.eigh(matrix)
+    matrix = (eigenvectors * np.maximum(eigenvalues, 0.0)) @ eigenvectors.T
 
     if opt.mahalanobis_mode == 'diagonal':
         matrix = np.diag(np.maximum(np.diag(matrix), 0.0))
@@ -386,9 +380,8 @@ def prepare_fixed_mahalanobis(opt, train_loader):
         f'shrinkage={effective_shrinkage:g}, '
         f'covariance_condition={np.linalg.cond(covariance):.6g}'
     )
-    print(f'Final Mahalanobis matrix M:\n{matrix}')  # 打印训练中实际使用的固定马氏矩阵 M。
-    return torch.from_numpy(matrix.astype(np.float32))  # 固定 M，不参与梯度传播。
-
+    print(f'Final Mahalanobis matrix M:\n{matrix}')
+    return torch.from_numpy(matrix.astype(np.float32))
 
 def set_model(opt, lmmo_metric=None, mahalanobis_matrix=None):
     device = get_device()
@@ -431,7 +424,6 @@ def set_model(opt, lmmo_metric=None, mahalanobis_matrix=None):
     criterion = criterion.to(device)
 
     return model, criterion
-
 
 def train(train_loader, model, criterion, optimizer, epoch, opt):
     model.train()
@@ -496,7 +488,6 @@ def train(train_loader, model, criterion, optimizer, epoch, opt):
                     )
                 )
 
-
 def main():
     opt = parse_option()
     set_seed(opt.seed)
@@ -557,7 +548,6 @@ def main():
 
     save_file = os.path.join(opt.save_folder, 'last.pth')
     save_model(model, optimizer, opt, opt.epochs, save_file)
-
 
 if __name__ == '__main__':
     main()
