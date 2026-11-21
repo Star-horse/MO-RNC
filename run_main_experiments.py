@@ -121,8 +121,6 @@ def main():
         raise FileExistsError(f'Use a new empty --output-dir: {args.output_dir}')
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / 'commands.json').write_text(json.dumps(plan, indent=2))
-    if 'Sarcos' in args.datasets:
-        print('SARCOS: verify that this data version matches the manuscript before comparing results.', flush=True)
     records = []
     for index, run in enumerate(plan, 1):
         folder = Path(run['output_dir'])
